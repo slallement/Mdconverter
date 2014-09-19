@@ -188,7 +188,7 @@ struct
 		| Not_matched -> text
 		| Begin_match  -> "<table>\n\t<tr><td>" ^ (splitting text) ^ "</td></tr>"
 		| Matched     -> "\t<tr><td>" ^ (splitting text) ^ "</td></tr>"
-		| End_match    -> "</table>\n" ^ (splitting text)	
+		| End_match    -> "</table>\n" ^ (text)	
 	
 end
 
@@ -233,17 +233,17 @@ struct
 			aux 0 0
 		in
 		let splitting text =
-			String.concat "</td><td>" (Str.split (Str.regexp "|") text)
+			String.concat "&" (Str.split (Str.regexp "|") text)
 		in
 		let nbcol = count_substring text "|" in
 		match state with
 		| Not_matched -> text
-		| Begin_match  -> "\begin{tabular}{" 
-				^ (String.repeat " c" nbcol)
-				^"}\n\t<tr><td>" ^ (splitting text) ^ "</td></tr>"
+		| Begin_match  -> "\\begin{tabular}{" 
+				^ (String.repeat " c" (nbcol+1) )
+				^" }\n\t" ^ (splitting text) ^ "\\\\"
 				(* todo *)
-		| Matched     -> "\t<tr><td>" ^ (splitting text) ^ "</td></tr>"
-		| End_match    -> "</table>\n" ^ (splitting text)	
+		| Matched     -> "\t" ^ (splitting text) ^ "\\\\"
+		| End_match    -> "\\end{tabular}\n" ^ (text)	
 		
 
 end
