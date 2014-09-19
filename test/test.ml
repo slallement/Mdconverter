@@ -3,16 +3,16 @@ open OUnit2;;
 (* Used to do unit testing *)
 
 let test1_1 test_ctxt = 
-	assert_equal 
-		(Rules.Rule_Latex.make_title 1 "content")
+	assert_equal ~printer:(fun x -> x)
 		"\\subsection{content}"
+		(Rules.Rule_Latex.make_title 1 "content")
 	;;
 	
 let test1_2 test_ctxt =
 	let module Latex_r = Rules.Apply_rule(Rules.Rule_Latex) in
-	assert_equal 
-		(Latex_r.format_text "abc *def* _ghi_")
-		"abc \\textbf{def} \\emph{ghi}"
+	assert_equal ~printer:(fun x -> x)
+		"abc \\textbf{def} \\emph{ghi} test_inside"
+		(Latex_r.format_text "abc *def* _ghi_ test_inside")
 	;;
 	
 let test1_3 test_ctxt =
@@ -38,8 +38,8 @@ let test1_4 test_ctxt =
 	let res_line = String.concat "" res in
 	let comp_line = String.concat "" comp in
 	assert_equal ~printer:(fun x -> x)
-		res_line
 		comp_line
+		res_line
 	;;
 	
 let test1_5 test_ctxt =

@@ -9,11 +9,12 @@ type block_state =
 	| End_match
 
 let blank = "[ \r\t]*";; (* cst useful *)
-let regex_title = Str.regexp ("^" ^ blank ^ "\\(#+\\)" ^ blank ^ "\\(.*\\)");;
-let regex_bold = Str.regexp " \\*\\(.*\\)\\*";;
-let regex_italic = Str.regexp " _\\(.*\\)_";;
+let regex_title = Str.regexp @@ "^" ^ blank ^ "\\(#+\\)" ^ blank ^ "\\(.*\\)";;
+let regex_bold = Str.regexp @@ "\\( \\)\\*\\(.*\\)\\*" ^ "\\([^a-zA-Z]+\\|$\\)";;
+let regex_italic = Str.regexp @@ "\\( \\)_\\(.*\\)_" ^ "\\([^a-zA-Z]+\\|$\\)";;
 let regex_list_item = Str.regexp ("^" ^ blank ^ "[*-]" ^ blank ^ "\\(.*\\)");;
 let regex_image = Str.regexp "!\\[\\(.*\\)\\](\\(.*\\))";;
+let regex_link = Str.regexp "\\(https?://[^ ]*\\)";;
 let regex_table = Str.regexp ("" ^ blank ^ "|\\(.*\\)|" ^ blank ^ "");;
 
 let ending_string = "EOF\n";
@@ -31,6 +32,7 @@ sig
 	val replace_italic : string
 	val replace_bold : string
 	val replace_image : string
+	val replace_link : string
 end;;
 
 (* Module to make the conversion of a string channel *)
@@ -39,13 +41,13 @@ functor (Rule: RULE_TYPE) ->
 struct
 	
 	let format_text text =
-		let text = Str.global_replace regex_bold Rule.replace_bold text in
-		let text = Str.global_replace regex_italic Rule.replace_italic text in
-		let text = Str.global_replace regex_image Rule.replace_image text in
-		text;;
+		text
+		|> Str.global_replace regex_italic Rule.replace_italic
+		|> Str.global_replace regex_bold Rule.replace_bold
+		|> Str.global_replace regex_image Rule.replace_image
+		|> Str.global_replace regex_link Rule.replace_link
+		;;
 		
-	let process_text_formatting text =
-		format_text text;;
 		
 	(* title *)
 	let get_title_content text =
@@ -129,7 +131,7 @@ struct
 	(* apply the rules for converting the string text *)
 	let convert_markdown text =
 		process_text text 
-		|> process_text_formatting;;
+		|> format_text;;
 		
 	let process_line output line  = 
 		let text = (convert_markdown line) in
@@ -162,11 +164,13 @@ struct
 	
 	let replace_bold =
 		let tag = "strong" in
-		" "^(tag_surround tag "\\1");;
+		"\\1"^(tag_surround tag "\\2")^"\\3"
 		
 	let replace_italic = 
 		let tag = "em" in
-		" "^(tag_surround tag "\\1") ;;
+		"\\1"^(tag_surround tag "\\2") ^ "\\3"
+		
+	let replace_link = "<a href=\"\\1\">\\1</a>"
 	
 	let replace_image = "<img alt=\"\\1\" src=\"\\2\" />"
 
@@ -206,15 +210,16 @@ struct
 				| x -> ( (String.repeat "sub" x) ^ "section" ) in
 		"\\"^begin_title ^ "{" ^ content ^ "}"
 		
-	let replace_bold = " \\textbf{\\1}"
-	let replace_italic = " \\emph{\\1}"
+	let replace_bold = "\\1\\textbf{\\2}\\3"
+	let replace_italic = "\\1\\emph{\\2}\\3"
 	let replace_image = "\\begin{figure}[ht!]\n\\includegraphics[scale=1]{\\2}\n\\caption{\\1}\n\\end{figure}"
+	let replace_link = "\\href{\\1}{\\1}"
 			
 	let format_list block_state text = match block_state with
 		| Not_matched -> text
-		| Begin_match  -> "\\begin{itemize}\n\t\\item " ^ text ^ ""
+		| Begin_match -> "\\begin{itemize}\n\t\\item " ^ text ^ ""
 		| Matched     -> "\t\\item " ^ text ^ ""
-		| End_match    -> "\\end{itemize}\n" ^ text
+		| End_match   -> "\\end{itemize}\n" ^ text
 	
 	let format_table state text = text
 	
